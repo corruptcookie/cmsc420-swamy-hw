@@ -1,13 +1,28 @@
 import java.lang.String;
 
+class Node {
+    Node[]  children;
+    String definition;
+    boolean wordExists;
+
+    Node() {
+        children = new Node[26]; //Only care about lowercase letters
+        wordExists = false; //Check if we reached the end of a word
+        definition = null;
+    }
+}
+
+
 /**
  * Dictionary class that stores words and associates them with their definitions
  */
 public class Dictionary {
+    Node dict;
     /**
      * Constructor to initialize the Dictionary
      */
     public Dictionary() {
+        dict = new Node();
     }
 
     /**
@@ -19,7 +34,43 @@ public class Dictionary {
      * @param definition The definition we want to associate with the word
      */
     public void add(String word, String definition) {
-        // TODO
+        Node curr = dict;
+
+        for (char ch : word.toCharArray()) {
+            int pos = ch - 'a'; //Maps all character from 0-25
+
+            if (curr.children[pos] == null) {
+                curr.children[pos] = new Node(); //Position tells us character
+            }
+
+            curr = curr.children[pos];
+        }
+
+        curr.definition = definition;
+        curr.wordExists = true;
+    }
+
+    // Recursive method for remove
+    private boolean remove_recursive(String word, Node curr, int count) {
+        //Count represents next character to look at in word
+        if (count == word.length()) { //Checks last character to remove word
+            curr.wordExists = false;
+            curr.definition = null;
+            return curr.children.length == 0; //Checks if node can be deleted
+        }
+
+        char ch = word.charAt(count);
+        int next = ch - 'a';
+        Node next_curr = curr.children[next];
+        count = count + 1;
+
+        //Recursively removes any other characters not used by other words
+        if (remove_recursive(word, next_curr, count)) {
+            curr.children[next] = null;
+            return (curr.children.length == 0) && (!curr.wordExists);
+        }
+
+        return false;
     }
 
     /**
@@ -28,7 +79,8 @@ public class Dictionary {
      * @param word The word we want to remove from our dictionary
      */
     public void remove(String word) {
-        // TODO
+        //From class ONLY REMOVE UP UNTIL FIRST NON-TRIVIAL NODE
+        remove_recursive(word, dict, 0);
     }
 
     /**
@@ -39,6 +91,22 @@ public class Dictionary {
      * @return The definition of the word, or null if not found
      */
     public String getDefinition(String word) {
+        Node curr = dict;
+
+        for (char ch : word.toCharArray()) {
+            int pos = ch - 'a';
+
+            if (curr.children[pos] == null) {
+                return null;
+            }
+
+            curr = curr.children[pos];
+        }
+
+        if (curr.wordExists) {
+            return curr.definition;
+        }
+
         return null;
     }
 
@@ -52,7 +120,50 @@ public class Dictionary {
      * @return The sequence representation, or null if word not found
      */
     public String getSequence(String word) {
-        return null;
+        Node curr = dict;
+        StringBuilder sb = new StringBuilder();
+
+        for (char ch : word.toCharArray()) {
+            int pos = ch - 'a';
+
+            if (curr == null) {
+                return null;
+            } else if (curr.children[pos] == null) {
+                return null;
+            }
+
+            if (sb.length() > 0) {
+                if (curr.wordExists) {
+                    sb.append("-");
+                }
+            }
+
+            sb.append(ch);
+            curr = curr.children[pos];
+        }
+
+        if (curr.wordExists) {
+            return sb.toString();
+        } else {
+            return null;
+        }
+    }
+
+    private int recursive_count(Node curr) {
+        if (curr == null) {
+            return 0;
+        }
+
+        int count = 0;
+
+        if (curr.wordExists) {
+            count = count + 1;
+        }
+
+        for (Node next : curr.children) {
+            count += recursive_count(next);
+        }
+        return count;
     }
 
     /**
@@ -62,7 +173,44 @@ public class Dictionary {
      * @return The number of words that start with the prefix
      */
     public int countPrefix(String prefix) {
-        return 0;
+        Node curr = dict;
+
+        for (char ch : prefix.toCharArray()) {
+            int pos = ch - 'a';
+
+            if (curr.children[pos] == null) {
+                return 0;
+            }
+            curr = curr.children[pos];
+        }
+
+        return recursive_count(curr);
+    }
+
+    private Node recursive_compress(Node curr) {
+        if (curr == null) {
+            return null;
+        }
+
+        int count = 0; //Counts # of children
+        Node next = null;
+
+        for (int i = 0; i < curr.children.length; i++) {
+            curr.children[i] = recursive_compress(curr.children[i]);
+
+            if (curr.children[i] != null) {
+                count = count + 1;
+                next = curr.children[i];
+            }
+        }
+
+        if (count == 1) {
+            if (!curr.wordExists) {
+                return next;
+            }
+        }
+
+        return curr;
     }
 
     /**
@@ -70,6 +218,6 @@ public class Dictionary {
      * This operation should not change the behavior of any other methods
      */
     public void compress() {
-        // TODO
+        dict = recursive_compress(dict);
     }
 }

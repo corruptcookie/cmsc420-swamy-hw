@@ -1,3 +1,7 @@
+import java.util.Comparator;
+import java.util.TreeSet;
+import java.util.HashMap;
+
 /**
  * A convenient class that stores a pair of integers.
  * DO NOT MODIFY THIS CLASS.
@@ -33,6 +37,39 @@ class IntPair {
     }
 }
 
+class Node {
+    IntPair pair;
+    Node prev;
+    Node next;
+    int depth;
+
+    public Node(IntPair data) {
+        this.pair = data;
+        this.prev = null;
+        this.next = null;
+        this.depth = -1;
+    }
+}
+
+class DublyList {
+    Node head;
+    Node tail;
+
+    public DublyList() {
+        this.head = null;
+        this.tail = null;
+    }
+}
+
+class Sortbysecond implements Comparator<Node> {
+
+    @Override
+    public int compare(Node a, Node b)
+    {
+        return a.pair.second - b.pair.second;
+    }
+}
+
 /**
  * TreasureValleyExplorer class operates on a landscape of Numerica,
  * selectively modifying the most and least valuable valleys of a specified
@@ -41,11 +78,22 @@ class IntPair {
  * DO NOT MODIFY THE SIGNATURE OF THE METHODS PROVIDED IN THIS CLASS.
  * You are encouraged to add methods and variables in the class as needed.
  *
- * @author <Your Name goes here>
+ * @author Shasank S. Patel
  */
 public class TreasureValleyExplorer {
 
     // Create instance variables here.
+    DublyList landscape;
+    HashMap<Integer, TreeSet> depthMap;
+
+    public int findDepth(Node curr) {
+        int count = 0;
+        while (curr.prev != null && curr.prev.pair.first > curr.pair.first) {
+            count++;
+            curr = curr.prev;
+        }
+        return count;
+    }
 
     /**
      * Constructor to initialize the TreasureValleyExplorer with the given heights
@@ -59,6 +107,58 @@ public class TreasureValleyExplorer {
      */
     public TreasureValleyExplorer(int[] heights, int[] values) {
         // TODO: Implement the constructor.
+        super();
+        this.landscape = new DublyList();
+        this.depthMap = new HashMap<>(heights.length);
+
+        for (int i = 0; i < heights.length; i++) {
+            Node curr = new Node(new IntPair(heights[i], values[i]));
+
+            /* Add pair to landscape */
+            if (this.landscape.head == null) {
+                this.landscape.head = curr;
+                this.landscape.tail = this.landscape.head;
+            } else {
+                this.landscape.tail.next = curr;
+                curr.prev = this.landscape.tail;
+                this.landscape.tail = curr;
+            }
+
+            /* Readjust valleys */
+            if (curr.prev == null) {
+                curr.depth = 0;
+                TreeSet<Node> currTree = depthMap.get(curr.depth);
+                if (currTree == null) {
+                    currTree = new TreeSet<>(new Sortbysecond());
+                    currTree.add(curr);
+                    depthMap.put(curr.depth, currTree);
+                } else {
+                    currTree.add(curr);
+                }
+
+            } else if (curr.prev.pair.first > curr.pair.first) {
+                /* Update depths */
+                curr.depth = findDepth(curr);
+                /* Remove previous valley */
+                if (curr.prev.depth != -1) {
+                    TreeSet<Node> prevTree = depthMap.get(curr.prev.depth);
+                    prevTree.remove(curr.prev);
+                    curr.prev.depth = -1;
+                }
+                /* Add new valley */
+                TreeSet<Node> currTree = depthMap.get(curr.depth);
+                if (currTree == null) {
+                    currTree = new TreeSet<>(new Sortbysecond());
+                    depthMap.put(curr.depth, currTree);
+                    currTree.add(curr);
+                } else {
+                    currTree.add(curr);
+                }
+
+            } else {
+                curr.depth = -1;
+            }
+        }
     }
 
     /**
@@ -69,7 +169,7 @@ public class TreasureValleyExplorer {
      */
     public boolean isEmpty() {
         // TODO: Implement the isEmpty method.
-        return false;
+        return this.landscape.head == null;
     }
 
     /**
@@ -142,7 +242,12 @@ public class TreasureValleyExplorer {
      */
     public IntPair getMostValuableValley(int depth) {
         // TODO: Implement the getMostValuableValleyValue method
-        return null;
+        IntPair valley = null;
+        TreeSet<Node> currTree = depthMap.get(depth);
+        if (currTree != null) {
+            valley = currTree.last().pair;
+        }
+        return valley;
     }
 
     /**
@@ -157,7 +262,12 @@ public class TreasureValleyExplorer {
      */
     public IntPair getLeastValuableValley(int depth) {
         // TODO: Implement the getLeastValuableValleyValue method
-        return null;
+        IntPair valley = null;
+        TreeSet<Node> currTree = depthMap.get(depth);
+        if (currTree != null) {
+            valley = currTree.first().pair;
+        }
+        return valley;
     }
 
     /**
@@ -169,6 +279,11 @@ public class TreasureValleyExplorer {
      */
     public int getValleyCount(int depth) {
         // TODO: Implement the getValleyCount method
-        return 0;
+        int count = 0;
+        TreeSet<Node> currTree = depthMap.get(depth);
+        if (currTree != null) {
+            count = currTree.size();
+        }
+        return count;
     }
 }
